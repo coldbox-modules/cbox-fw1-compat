@@ -1,0 +1,1 @@
+<cfset variables.body = renderView() />
