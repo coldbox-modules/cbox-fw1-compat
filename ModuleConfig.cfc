@@ -7,16 +7,27 @@ component {
     this.version            = "0.1.0";
 
     function configure() {
+    	var appMappingDots = '';
+    	var appMappingSlash = '';
+    	
+    	if( len( appMapping ) ) {
+	    	appMappingDots = appMapping & '.';
+	    	appMappingSlash = replace( appMapping, '.', '/', 'all' ) & '/';
+    	}
+    	
         var config = controller.getSettingStructure( false );
-        var configuredColdBoxSettings = config.coldBoxConfig.getPropertyMixin( "coldbox", "variables", {} )
-        var configuredLayoutSettings = config.coldBoxConfig.getPropertyMixin( "layoutSettings", "variables", {} )
+        var configuredColdBoxSettings = config.coldBoxConfig.getPropertyMixin( "coldbox", "variables", {} );
+        var configuredLayoutSettings = config.coldBoxConfig.getPropertyMixin( "layoutSettings", "variables", {} );
 
         // this is a helper for people who have never had to deal with reinits
         defaultIfNotSpecified( "reinitPassword", "", configuredColdBoxSettings, config );
 
-        defaultIfNotSpecified( "handlersConvention", "controllers", configuredColdBoxSettings, config );
-        defaultIfNotSpecified( "HandlersInvocationPath", "controllers", configuredColdBoxSettings, config );
-        defaultIfNotSpecified( "HandlersPath", expandPath( "/" ) & "controllers", configuredColdBoxSettings, config );
+		// If services folder exists, map it.
+		if( directoryExists( '/#appMappingSlash#controllers' ) ) {
+	        defaultIfNotSpecified( "handlersConvention", "controllers", configuredColdBoxSettings, config );
+	        defaultIfNotSpecified( "HandlersInvocationPath", "#appMappingSlash#controllers", configuredColdBoxSettings, config );
+	        defaultIfNotSpecified( "HandlersPath", expandPath( "/#appMappingSlash#" ) & "controllers", configuredColdBoxSettings, config );
+	      }
         defaultIfNotSpecified( "eventName", "action", configuredColdBoxSettings, config );
         defaultIfNotSpecified( "defaultLayout", "", configuredLayoutSettings, config );
         defaultIfNotSpecified( "defaultEvent", "main.default", configuredColdBoxSettings, config );
@@ -26,23 +37,30 @@ component {
 
         binder.map( "DI1Adapter" ).to( "#moduleMapping#.models.DI1Adapter" );
 
-        binder.mapDirectory(
-            packagePath = "model.services",
-            namespace = "Service",
-            influence = function( binder, path ) {
-                var mapping = binder.map( listLast( path, "." ) & "Service" )
-                    .to( path )
-                    .initArg( name = "beanFactory", ref = "DI1Adapter" );
-
-                var md = getComponentMetadata( path );
-                for ( var prop in md.properties ) {
-                    if ( reFindNoCase( "service$", prop.name ) > 0 ) {
-                        mapping.initArg( prop.name, prop.name );
-                    }
-                }
-            }
-        );
-        binder.mapDirectory( packagePath = "model.beans", namespace = "Bean" );
+		// If services folder exists, map it.
+		if( directoryExists( '/#appMappingSlash#model/services' ) ) {		
+	        binder.mapDirectory(
+	            packagePath = "#appMappingDots#model.services",
+	            namespace = "Service",
+	            influence = function( binder, path ) {
+	                var mapping = binder.map( listLast( path, "." ) & "Service" )
+	                    .to( path )
+	                    .initArg( name = "beanFactory", ref = "DI1Adapter" );
+	
+	                var md = getComponentMetadata( path );
+	                for ( var prop in md.properties ) {
+	                    if ( reFindNoCase( "service$", prop.name ) > 0 ) {
+	                        mapping.initArg( prop.name, prop.name );
+	                    }
+	                }
+	            }
+	        );	
+		}
+		
+		// If beans folder exists, map it.
+		if( directoryExists( '/#appMappingSlash#model/beans' ) ) {	
+        	binder.mapDirectory( packagePath = "#appMappingDots#model.beans", namespace = "Bean" );
+        }
     }
 
     function onLoad() {
