@@ -61,6 +61,10 @@ component {
 		if( directoryExists( '/#appMappingSlash#model/beans' ) ) {	
         	binder.mapDirectory( packagePath = "#appMappingDots#model.beans", namespace = "Bean" );
         }
+        
+        // Override ColdBox renderer mapping.
+		binder.map( alias="Renderer@coldbox", force=true )
+			.toDSL( 'renderer@fw1-compat' );
     }
 
     function onLoad() {
