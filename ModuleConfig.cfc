@@ -28,12 +28,13 @@ component {
 	        defaultIfNotSpecified( "HandlersInvocationPath", "#appMappingSlash#controllers", configuredColdBoxSettings, config );
 	        defaultIfNotSpecified( "HandlersPath", expandPath( "/#appMappingSlash#" ) & "controllers", configuredColdBoxSettings, config );
 	      }
-        defaultIfNotSpecified( "eventName", "action", configuredColdBoxSettings, config );
-        defaultIfNotSpecified( "defaultLayout", "", configuredLayoutSettings, config );
+     //   defaultIfNotSpecified( "eventName", "action", configuredColdBoxSettings, config );
+        defaultIfNotSpecified( "defaultLayout", "default", configuredLayoutSettings, config );
         defaultIfNotSpecified( "defaultEvent", "main.default", configuredColdBoxSettings, config );
 
         // reprocess handlers now that the convention might have changed
         controller.getHandlerService().onConfigurationLoad();
+        controller.getRequestService().onConfigurationLoad();
 
         binder.map( "DI1Adapter" ).to( "#moduleMapping#.models.DI1Adapter" );
 
@@ -98,6 +99,25 @@ component {
     function preLayoutRender( event, interceptData, buffer, rc, prc ) {
         interceptData.instance.injectPropertyMixin( "body", controller.getRenderer().renderView(), "variables" );
     }
+
+    function afterInstanceInspection( event, interceptData, buffer, rc, prc ) {
+		var md = interceptData.mapping.getObjectMetadata();
+		
+		// TODO: Figure out when DI/1 autowires. I assume it's more than just for controllers
+        if( interceptData.mapping.getType() == 'CFC' && md.fullname contains 'controllers' ) {
+	    	for( var prop in md.properties ?: [] ) {
+	    		prop.inject = prop.inject ?: prop.name;
+	    	}
+	    	// This is kind of messy, but the easiest way to reprocess DImetadata
+	    	interceptData.mapping.$secret = $secret;
+	    	interceptData.mapping.$secret();
+	    	interceptData.mapping.processDIMetadata( interceptData.binder, md );
+	    }
+    }
+
+ 	function $secret() {
+		this.processDIMetadata = variables.processDIMetadata;
+	}
 
     private function defaultIfNotSpecified( name, defaultValue, configuredSettings, systemSettings ) {
         if ( ! structKeyExists( configuredSettings, name ) ) {
